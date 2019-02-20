@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Acme DNS
+
+Parameters:
+  VpcId:
+    Type: String
+  NginxIngressElbHost:
+    Type: String
+
+Resources:
+
+  AcmeHostedZone: 
+    Type: "AWS::Route53::HostedZone"
+    Properties: 
+      HostedZoneConfig: 
+        Comment: "My hosted zone for acme.com"
+      Name: "acme.com"
+      VPCs: 
+        - 
+          VPCId: !Ref VpcId
+          VPCRegion: "us-west-2"
+
+  AcmeUiDns:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref AcmeHostedZone
+      Name: www.acme.com.
+      Type: CNAME
+      TTL: '900'
+      ResourceRecords:
+      - !Ref NginxIngressElbHost
+
+  AcmeApiDns:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref AcmeHostedZone
+      Name: api.acme.com.
+      Type: CNAME
+      TTL: '900'
+      ResourceRecords:
+      - !Ref NginxIngressElbHost

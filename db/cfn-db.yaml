@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Acme RDS Storage Encrypted
+
+Parameters:
+  ClusterVpc:
+    Type: String
+  ClusterNodeSg:
+    Type: String
+  DbPass:
+    Type: String
+  SubnetIdList:
+    Type: CommaDelimitedList
+
+Resources:
+  
+  Key:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-acme-db-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Join 
+                - ''
+                - - 'arn:aws:iam::'
+                  - !Ref 'AWS::AccountId'
+                  - ':root'
+            Action: 'kms:*'
+            Resource: '*'
+      Tags:
+        - Key: cluster
+          Value: acme
+
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: "description"
+      SubnetIds: !Ref SubnetIdList
+
+  VpcSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref ClusterVpc
+      SecurityGroupIngress:
+        - 
+          IpProtocol: "tcp"
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ClusterNodeSg
+      GroupDescription: Acme DB VPC Security Group
+
+  Db:
+    Type: AWS::RDS::DBInstance
+    DependsOn: VpcSecurityGroup
+    Properties:
+      DBInstanceIdentifier: acme-db
+      MultiAZ: true
+      Engine: "postgres"
+      BackupRetentionPeriod: 7
+      DBInstanceClass: db.t3.micro
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      StorageEncrypted: true
+      KmsKeyId: !Ref Key
+      AllocatedStorage: "5"
+      MasterUsername: acme
+      MasterUserPassword: !Ref DbPass
+      VPCSecurityGroups:
+        -
+          !GetAtt VpcSecurityGroup.GroupId
+
